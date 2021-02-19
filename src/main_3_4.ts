@@ -1,13 +1,5 @@
 /* =============================================================
- * bootstrap-autocomplete.js v2.4.0
- * https://github.com/goosemanjack/bootstrap-autocomplete
- * 
- * Cleanup of minor code issues. Drop Bootstrap 3 support and make forward compatible with Bootstrap.
- * Addition of new events:
- *   + itemSelected: guaranteed to fire after selectedItem has been set 
- *   + itemFocus: fired when an item gets the focus or is hovered over
- * =============================================================
- * forked from bootstrap-autocomplete.js v2.3.4
+ * bootstrap-autocomplete.js v2.3.4
  * https://github.com/xcash/bootstrap-autocomplete
  * =============================================================
  * Forked from bootstrap3-typeahead.js v3.1.0
@@ -27,6 +19,7 @@
  * limitations under the License.
  * ============================================================ */
 import { AjaxResolver, BaseResolver } from './resolvers';
+import { DropdownV3 } from './dropdownV3';
 import { DropdownV4 } from './dropdownV4';
 
 
@@ -47,25 +40,15 @@ export interface AutoCompleteSettings {
     searchPost: (results: any, el: JQuery<HTMLElement>) => any,
     select: () => void,
     focus: () => void,
-    itemSelected: (item: any, searchText: string) => any,
-    itemFocus: (item: any, searchText: string) => any
   }
 }
 
-/**
- * @class The main AutoComplete class
- */
 export class AutoComplete {
   public static NAME: string = 'autoComplete';
-  
-  /**
-   * Software version information
-   */
-  public static version: string = '2.4.0';
 
   private _el: Element;
   private _$el: JQuery<HTMLElement>;
-  private _dd: DropdownV4;
+  private _dd: DropdownV3 | DropdownV4;
   private _searchText: string;
   private _selectedItem: any = null;
   private _defaultValue: any = null;
@@ -90,8 +73,6 @@ export class AutoComplete {
       searchPost: null,
       select: null,
       focus: null,
-      itemSelected: null,
-      itemFocus: null
     }
   }
 
@@ -114,6 +95,9 @@ export class AutoComplete {
     if (this._isSelectElement) {
       this.convertSelectToText();
     }
+
+    // console.log('initializing', this._settings);
+
     this.init();
   }
 
@@ -206,18 +190,15 @@ export class AutoComplete {
       this.resolver = new AjaxResolver(this._settings.resolverSettings);
     }
     // Dropdown
-    if (this.getBootstrapVersion()[0] >= 4) {
+    if (this.getBootstrapVersion()[0] === 4) {
       // v4
-      var me = this;
-      var focusChangeHandler = function(data: any, element: any){
-        me.handleItemFocusChange(data, element);
-      }
-
       this._dd = new DropdownV4(this._$el, this._settings.formatResult,
-        this._settings.autoSelect, this._settings.noResultsText, focusChangeHandler
+        this._settings.autoSelect, this._settings.noResultsText, null
       );
     } else {
-      throw('Bootstrap 3 not supported');
+      this._dd = new DropdownV3(this._$el, this._settings.formatResult,
+        this._settings.autoSelect, this._settings.noResultsText
+      );
     }
   }
 
@@ -341,9 +322,10 @@ export class AutoComplete {
       }
     });
 
-    // selected event trigger
+    // selected event
     // @ts-ignore - Ignoring TS type checking
     this._$el.on('autocomplete.select', (evt: JQueryEventObject, item: any) => {
+      this._selectedItem = item;
       this.itemSelectedDefaultHandler(item);
     });
 
@@ -355,15 +337,6 @@ export class AutoComplete {
       }, 0)
     });
 
-  }
-
-  /**
-   * Handler to process when focus changes in the list
-   * @param item The data item
-   * @param listElement The HTML list element
-   */
-  private handleItemFocusChange(item: any, listElement: any): void {
-    this._$el.trigger('autocomplete.itemFocus', [item, listElement, this._searchText]);      
   }
 
   private handlerTyped(newValue: string): void {
@@ -436,16 +409,7 @@ export class AutoComplete {
     this._dd.updateItems(results, this._searchText);
   }
 
-  /**
-   * Trigger the internal actions after selection.
-   * Mark "itemSelected" for firing so it happens
-   * after the "select" event is processed.
-   * @param item item object selected from the list.
-   */
   protected itemSelectedDefaultHandler(item: any): void {
-    // save selected item
-    this._selectedItem = item;
-
     // this is a coerce check (!=) to cover null or undefined
     if (item != null) {
       // default behaviour is set elment's .val()
@@ -465,13 +429,8 @@ export class AutoComplete {
         this._selectHiddenField.val('');
       }
     }
-
-    // After update trigger the itemSelected event
-    var me = this; // closure reference for timeout
-    setTimeout(function(){
-      me._$el.trigger('autocomplete.itemSelected', [item, me._searchText]);
-    }, 5);
-
+    // save selected item
+    this._selectedItem = item;
     // and hide
     this._dd.hide();
   }

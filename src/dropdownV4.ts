@@ -16,12 +16,14 @@ export class DropdownV4 {
   protected mouseover: boolean;
   protected ddMouseover: boolean = false;
   protected noResultsText: string;
+  private focusChangeEventHandler: any;
 
-  constructor(e: JQuery, formatItemCbk: (item: any) => any, autoSelect: boolean, noResultsText: string) {
+  constructor(e: JQuery, formatItemCbk: (item: any) => any, autoSelect: boolean, noResultsText: string, focusChangeHandler: any) {
     this._$el = e;
     this.formatItem = formatItemCbk;
     this.autoSelect = autoSelect;
     this.noResultsText = noResultsText;
+    this.focusChangeEventHandler = focusChangeHandler;
 
     // initialize it in lazy mode to deal with glitches like modals
     // this.init();
@@ -79,8 +81,9 @@ export class DropdownV4 {
 
     this._dd.on('mouseenter', '.dropdown-item', (evt: JQueryEventObject) => {
       if (this.haveResults) {
-        $(evt.currentTarget).closest('div').find('.dropdown-item.active').removeClass('active');
-        $(evt.currentTarget).addClass('active');
+        this.updateItemFocus($(evt.currentTarget));
+        // $(evt.currentTarget).closest('div').find('.dropdown-item.active').removeClass('active');
+        // $(evt.currentTarget).addClass('active');
         this.mouseover = true;
       }
     });
@@ -90,7 +93,6 @@ export class DropdownV4 {
     });
 
     this.initialized = true;
-
   }
 
   private checkInitialized(): void {
@@ -98,6 +100,25 @@ export class DropdownV4 {
     if (!this.initialized) {
       // if not already initialized
       this.init();
+    }
+  }
+
+  /**
+   * Encapsulate setting item focus
+   * @param element 
+   */
+  private updateItemFocus(element: any): any {
+    element.closest('div').find('.dropdown-item.active').removeClass('active');
+    element.addClass('active');
+    var itemData = element.data('item');
+    if(this.focusChangeEventHandler != null){
+      try{
+        
+        this.focusChangeEventHandler(itemData, element);
+      }
+      catch(ex){
+        console.error('Autocomplete dropdown', ex);
+      }
     }
   }
 
@@ -125,7 +146,8 @@ export class DropdownV4 {
       }
 
       currElem.removeClass('active');
-      nextElem.addClass('active');
+      // nextElem.addClass('active');
+      this.updateItemFocus($(nextElem));
     }
   }
 
@@ -209,7 +231,7 @@ export class DropdownV4 {
 
         const li = $('<a >');
         li.addClass('dropdown-item')
-          .css({ 'overflow': 'hidden', 'text-overflow': 'ellipsis' })
+          .css({ 'cursor': 'pointer', 'overflow': 'hidden', 'text-overflow': 'ellipsis' })
           .html(itemHtml)
           .data('item', item);
 

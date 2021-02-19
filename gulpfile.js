@@ -60,8 +60,8 @@ function compileJs() {
     .pipe(plumber({
       errorHandler: errorHandler
     }))
-    .pipe(tslint({ formatter: 'verbose' }))
-    .pipe(tslint.report())
+//    .pipe(tslint({ formatter: 'verbose' }))
+//    .pipe(tslint.report())
     .pipe(webpack(webpackConfig))
     .pipe(rename('bootstrap-autocomplete.js'))
     .pipe(gulp.dest('dist/latest/'));
@@ -114,6 +114,13 @@ function minify() {
     .pipe(gulp.dest('dist/latest'));
 }
 
+function buildDev(cb) {
+  return gulp.series(
+    cleanDist,
+    build
+  )(cb);
+}
+
 function release(cb) {
   return gulp.series(
     cleanDist,
@@ -132,3 +139,5 @@ exports.default = help;
 exports.monitor = monitor;
 exports.release = release;
 exports.test = test;
+exports.build = buildDev;
+exports.buildDev = buildDev;
